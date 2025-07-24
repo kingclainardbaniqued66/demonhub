@@ -1,141 +1,176 @@
--- DemonHub by GLockz
-local Players, RunService, UIS = game:GetService("Players"), game:GetService("RunService"), game:GetService("UserInputService")
-local LP, Mouse, Cam = Players.LocalPlayer, Players.LocalPlayer:GetMouse(), workspace.CurrentCamera
-local Target, SpeedEnabled = nil, true
+-- DemonHub by GLockz (Smooth & Stylish UI, Fully Functional)
 
--- UI Setup
-local gui = Instance.new("ScreenGui", LP:WaitForChild("PlayerGui"))
-gui.Name = "DemonHubUI"
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+local Camera = workspace.CurrentCamera
+local LP = Players.LocalPlayer
 
-local openBtn = Instance.new("TextButton", gui)
+-- Settings (all ON by default)
+local Settings = {
+    Aimbot = true,
+    SilentAim = true,
+    ESP = true,
+    FOV = true,
+    TeamCheck = true,
+    WallCheck = true,
+    DeathCheck = true,
+    SpeedWalk = true,
+    WalkSpeed = 20,
+    FOVRadius = 30,
+    LockKey = Enum.KeyCode.E
+}
+
+-- Targeting
+local Target, Locking = nil, false
+
+-- GUI
+local screen = Instance.new("ScreenGui", LP:WaitForChild("PlayerGui"))
+screen.Name = "DemonHubUI"
+
+local openBtn = Instance.new("TextButton", screen)
 openBtn.Size = UDim2.new(0, 200, 0, 40)
-openBtn.Position = UDim2.new(0, 10, 0, 10)
+openBtn.Position = UDim2.new(0,10,0,10)
 openBtn.Text = "🔥 Open DemonHub Menu"
 openBtn.BackgroundColor3 = Color3.fromRGB(30,30,30)
 openBtn.TextColor3 = Color3.new(1,1,1)
 openBtn.Font = Enum.Font.GothamBold
 openBtn.TextSize = 18
 
-local mainFrame = Instance.new("ScrollingFrame", gui)
-mainFrame.Size = UDim2.new(0, 300, 0, 400)
-mainFrame.Position = UDim2.new(0, 10, 0, 60)
-mainFrame.CanvasSize = UDim2.new(0,0,3,0)
-mainFrame.BackgroundColor3 = Color3.fromRGB(20,20,20)
-mainFrame.Visible = false
+local main = Instance.new("Frame", screen)
+main.Size = UDim2.new(0, 300, 0, 400)
+main.Position = UDim2.new(0,10,0,60)
+main.BackgroundColor3 = Color3.fromRGB(20,20,20)
+main.Active = true
+main.Draggable = true
+main.Visible = false
 
--- Title
-local title = Instance.new("TextLabel", mainFrame)
-title.Size = UDim2.new(1, 0, 0, 40)
-title.Text = "🎯 DemonHub"
-title.Font = Enum.Font.GothamBlack
-title.TextSize = 22
-title.TextColor3 = Color3.new(1,1,1)
-title.BackgroundColor3 = Color3.fromRGB(40,40,40)
+local scroll = Instance.new("ScrollingFrame", main)
+scroll.Size = UDim2.new(1, 0, 1, 0)
+scroll.CanvasSize = UDim2.new(0,0,2,0)
+scroll.ScrollBarThickness = 4
 
--- Function to make toggles
-local y = 50
-local Settings = {
-    ["Aimbot"] = true,
-    ["SilentAim"] = true,
-    ["ESP"] = true,
-    ["FOV"] = true,
-    ["WallCheck"] = true,
-    ["TeamCheck"] = true,
-    ["BlatantMode"] = true,
-    ["SpeedWalk"] = true
-}
-for name, val in pairs(Settings) do
-    local btn = Instance.new("TextButton", mainFrame)
+local layout = Instance.new("UIListLayout", scroll)
+layout.Padding = UDim.new(0,5)
+
+-- Creates toggle buttons
+local function MakeToggle(txt)
+    local btn = Instance.new("TextButton", scroll)
     btn.Size = UDim2.new(1, -20, 0, 35)
-    btn.Position = UDim2.new(0, 10, 0, y)
-    btn.Text = name .. ": Open"
+    btn.BackgroundColor3 = Color3.fromRGB(35,35,35)
     btn.Font = Enum.Font.Gotham
-    btn.TextSize = 18
+    btn.TextSize = 16
     btn.TextColor3 = Color3.new(1,1,1)
-    btn.BackgroundColor3 = Color3.fromRGB(45,45,45)
+    btn.Text = txt .. ": ON"
     btn.MouseButton1Click:Connect(function()
-        Settings[name] = not Settings[name]
-        btn.Text = name .. ": " .. (Settings[name] and "Open" or "Closed")
+        local k = txt:gsub(" ", "")
+        Settings[k] = not Settings[k]
+        btn.Text = txt .. ": " .. (Settings[k] and "ON" or "OFF")
     end)
-    y = y + 40
 end
 
--- Toggle menu
+Quick toggles:
+for _, name in pairs({"Aimbot","SilentAim","ESP","FOV","TeamCheck","WallCheck","DeathCheck","SpeedWalk"}) do
+    MakeToggle(name)
+end
+
+-- Speed Walk input
+local speedLbl = Instance.new("TextLabel", scroll)
+speedLbl.Size = UDim2.new(1, -20, 0, 30)
+speedLbl.BackgroundTransparency = 1
+speedLbl.Text = "Walk Speed:"
+speedLbl.TextColor3 = Color3.new(1,1,1)
+speedLbl.Font = Enum.Font.Gotham
+speedLbl.TextSize = 16
+
+local speedBox = Instance.new("TextBox", scroll)
+speedBox.Size = UDim2.new(1, -20, 0, 30)
+speedBox.Text = tostring(Settings.WalkSpeed)
+speedBox.BackgroundColor3 = Color3.fromRGB(35,35,35)
+speedBox.Font = Enum.Font.Gotham
+speedBox.TextSize = 16
+speedBox.TextColor3 = Color3.new(1,1,1)
+
+speedBox.FocusLost:Connect(function()
+    local v = tonumber(speedBox.Text)
+    if v and v > 0 then
+        Settings.WalkSpeed = v
+    end
+end)
+
 openBtn.MouseButton1Click:Connect(function()
-    mainFrame.Visible = not mainFrame.Visible
-    openBtn.Text = mainFrame.Visible and "❌ Close DemonHub Menu" or "🔥 Open DemonHub Menu"
+    main.Visible = not main.Visible
+    openBtn.Text = main.Visible and "❌ Close DemonHub Menu" or "🔥 Open DemonHub Menu"
 end)
 
 -- FOV Circle
 local circle = Drawing.new("Circle")
-circle.Visible = true
-circle.Color = Color3.new(1, 1, 1)
-circle.Radius = 30
-circle.Thickness = 2
+circle.Thickness = 1
 circle.Filled = false
 circle.Transparency = 1
+circle.Color = Color3.new(1,1,1)
 
 RunService.RenderStepped:Connect(function()
-    local center = Vector2.new(Cam.ViewportSize.X / 2, Cam.ViewportSize.Y / 2)
-    circle.Position = center
+    circle.Visible = Settings.FOV
+    circle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    circle.Radius = Settings.FOVRadius
+
+    -- Apply WalkSpeed
+    if Settings.SpeedWalk and LP.Character and LP.Character:FindFirstChild("Humanoid") then
+        LP.Character.Humanoid.WalkSpeed = Settings.WalkSpeed
+    end
 end)
 
--- Get Closest Player
-function GetClosest()
-    local maxDist, closest = 1e5, nil
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= LP and p.Character and p.Character:FindFirstChild("HumanoidRootPart") and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health > 0 then
-            if Settings.TeamCheck and p.Team == LP.Team then continue end
-            local pos, onScreen = Cam:WorldToViewportPoint(p.Character.HumanoidRootPart.Position)
-            local dist = (Vector2.new(pos.X, pos.Y) - Cam.ViewportSize/2).Magnitude
-            if onScreen and dist < maxDist and dist < circle.Radius then
-                if Settings.WallCheck then
-                    local ray = Ray.new(Cam.CFrame.Position, (p.Character.Head.Position - Cam.CFrame.Position).Unit * 1000)
-                    local part = workspace:FindPartOnRay(ray, LP.Character, false, true)
-                    if part and not part:IsDescendantOf(p.Character) then continue end
+-- ESP Box
+local function CreateEspBox(plr)
+    if not plr.Character or plr.Character:FindFirstChild("ESPBox") then return end
+    local box = Instance.new("BoxHandleAdornment")
+    box.Name = "ESPBox"
+    box.Adornee = plr.Character:FindFirstChild("HumanoidRootPart")
+    box.AlwaysOnTop = true
+    box.ZIndex = 5
+    box.Color3 = Color3.new(1,0,0)
+    box.Size = Vector3.new(3,5,1)
+    box.Parent = plr.Character
+end
+
+-- Find and set closest target
+local function GetClosest()
+    local shortest = Settings.FOVRadius
+    local nearest = nil
+    for _, v in ipairs(Players:GetPlayers()) do
+        if v ~= LP and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+            if Settings.TeamCheck and v.Team == LP.Team then continue end
+            if Settings.DeathCheck and v.Character.Humanoid.Health <= 0 then continue end
+            local pos, onScreen = Camera:WorldToViewportPoint(v.Character.HumanoidRootPart.Position)
+            if onScreen then
+                local dist = (Vector2.new(pos.X,pos.Y) - (Camera.ViewportSize/2)).Magnitude
+                if dist < shortest and dist < Settings.FOVRadius then
+                    nearest = v
+                    shortest = dist
                 end
-                maxDist = dist
-                closest = p
             end
         end
     end
-    return closest
+    return nearest
 end
 
--- Lock with E
-UIS.InputBegan:Connect(function(input, gameProcessed)
-    if input.KeyCode == Enum.KeyCode.E and not gameProcessed then
-        Target = GetClosest()
+-- Lock key
+UIS.InputBegan:Connect(function(inp, gpe)
+    if inp.KeyCode == Settings.LockKey and not gpe then
+        Locking = not Locking
+        if Locking then Target = GetClosest() end
     end
 end)
 
--- Aimbot Lock
+-- Aimbot & Silent Aim
 RunService.RenderStepped:Connect(function()
-    if Settings.Aimbot and Target and Target.Character and Target.Character:FindFirstChild("Head") then
-        Cam.CFrame = Cam.CFrame:Lerp(CFrame.new(Cam.CFrame.Position, Target.Character.Head.Position), 0.3)
+    if Locking and Settings.Aimbot and Target and Target.Character and Target.Character:FindFirstChild("Head") then
+        Camera.CFrame = CFrame.new(Camera.CFrame.Position, Target.Character.Head.Position)
     end
-end)
-
--- Speed Walk
-RunService.RenderStepped:Connect(function()
-    if Settings.SpeedWalk and LP.Character and LP.Character:FindFirstChild("Humanoid") then
-        LP.Character.Humanoid.WalkSpeed = 30
-    end
-end)
-
--- Silent Aim (example basic)
-local mt = getrawmetatable(game)
-local old = mt.__namecall
-setreadonly(mt, false)
-mt.__namecall = newcclosure(function(...)
-    local args = {...}
-    local method = getnamecallmethod()
-    if Settings.SilentAim and Target and tostring(method) == "FindPartOnRayWithIgnoreList" then
-        local head = Target.Character and Target.Character:FindFirstChild("Head")
-        if head then
-            args[2] = Ray.new(Cam.CFrame.Position, (head.Position - Cam.CFrame.Position).Unit * 1000)
-            return old(unpack(args))
+    if Settings.SilentAim then
+        for _, v in ipairs(Players:GetPlayers()) do
+            if v ~= LP and Settings.ESP then CreateEspBox(v) end
         end
     end
-    return old(...)
 end)
