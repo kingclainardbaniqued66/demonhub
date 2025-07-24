@@ -1,17 +1,23 @@
 -- DemonHub by GLockz
--- GUI Aimbot with FOV Circle
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local LocalPlayer = Players.LocalPlayer
-local Mouse = LocalPlayer:GetMouse()
+local LP = Players.LocalPlayer
+local Mouse = LP:GetMouse()
 local Camera = workspace.CurrentCamera
 
+-- Settings
+local AimbotEnabled = false
+local FOVEnabled = false
+local FOVRadius = 100
+local AimPart = "Head"
+
 -- Create GUI
-local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+local ScreenGui = Instance.new("ScreenGui", LP:WaitForChild("PlayerGui"))
 ScreenGui.Name = "DemonHubUI"
 
+-- Open Button
 local OpenButton = Instance.new("TextButton")
 OpenButton.Name = "OpenButton"
 OpenButton.Text = "🔥 Open DemonHub Menu"
@@ -23,97 +29,100 @@ OpenButton.Font = Enum.Font.GothamBold
 OpenButton.TextSize = 18
 OpenButton.Parent = ScreenGui
 
+-- Main Frame
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 300, 0, 250)
+MainFrame.Size = UDim2.new(0, 250, 0, 200)
 MainFrame.Position = UDim2.new(0, 10, 0, 70)
 MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 MainFrame.Visible = false
 MainFrame.Parent = ScreenGui
 
+-- Title
 local Title = Instance.new("TextLabel", MainFrame)
-Title.Size = UDim2.new(1, 0, 0, 40)
 Title.Text = "DemonHub.lua"
+Title.Size = UDim2.new(1, 0, 0, 40)
 Title.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 Title.TextColor3 = Color3.new(1, 1, 1)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 22
 
--- Aimbot / FOV toggles
-local AimbotEnabled = false
-local FOVEnabled = false
-local FOVRadius = 120
+-- Aimbot Toggle Button
+local AimbotToggle = Instance.new("TextButton", MainFrame)
+AimbotToggle.Position = UDim2.new(0, 10, 0, 50)
+AimbotToggle.Size = UDim2.new(0, 230, 0, 40)
+AimbotToggle.Text = "Aimbot: OFF"
+AimbotToggle.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+AimbotToggle.TextColor3 = Color3.new(1, 1, 1)
+AimbotToggle.Font = Enum.Font.Gotham
+AimbotToggle.TextSize = 18
+
+-- FOV Toggle Button
+local FOVToggle = Instance.new("TextButton", MainFrame)
+FOVToggle.Position = UDim2.new(0, 10, 0, 100)
+FOVToggle.Size = UDim2.new(0, 230, 0, 40)
+FOVToggle.Text = "FOV Circle: OFF"
+FOVToggle.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+FOVToggle.TextColor3 = Color3.new(1, 1, 1)
+FOVToggle.Font = Enum.Font.Gotham
+FOVToggle.TextSize = 18
+
+-- Circle
 local FOVCircle = Drawing.new("Circle")
-FOVCircle.Color = Color3.fromRGB(255, 0, 0)
-FOVCircle.Thickness = 2
-FOVCircle.NumSides = 64
-FOVCircle.Filled = false
-FOVCircle.Visible = false
 FOVCircle.Radius = FOVRadius
+FOVCircle.Thickness = 2
+FOVCircle.Color = Color3.fromRGB(255, 0, 0)
+FOVCircle.Transparency = 1
+FOVCircle.Visible = false
+FOVCircle.Filled = false
 
-local function UpdateFOV()
-    FOVCircle.Position = Vector2.new(Mouse.X, Mouse.Y + 36)
-    FOVCircle.Visible = FOVEnabled
-end
+-- Toggle visibility
+OpenButton.MouseButton1Click:Connect(function()
+	MainFrame.Visible = not MainFrame.Visible
+end)
 
-RunService.RenderStepped:Connect(UpdateFOV)
+-- Toggle Aimbot
+AimbotToggle.MouseButton1Click:Connect(function()
+	AimbotEnabled = not AimbotEnabled
+	AimbotToggle.Text = "Aimbot: " .. (AimbotEnabled and "ON" or "OFF")
+end)
 
--- Find Closest Player
-local function GetClosestPlayer()
-    local closestPlayer = nil
-    local shortestDistance = FOVRadius
+-- Toggle FOV
+FOVToggle.MouseButton1Click:Connect(function()
+	FOVEnabled = not FOVEnabled
+	FOVCircle.Visible = FOVEnabled
+	FOVToggle.Text = "FOV Circle: " .. (FOVEnabled and "ON" or "OFF")
+end)
 
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Head") then
-            local pos, onScreen = Camera:WorldToViewportPoint(player.Character.Head.Position)
-            local dist = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(pos.X, pos.Y)).Magnitude
-            if onScreen and dist < shortestDistance then
-                shortestDistance = dist
-                closestPlayer = player
-            end
-        end
-    end
+-- Get Closest Player
+local function GetClosest()
+	local closestPlayer = nil
+	local shortestDistance = FOVRadius
 
-    return closestPlayer
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player ~= LP and player.Character and player.Character:FindFirstChild(AimPart) then
+			local screenPoint, onScreen = Camera:WorldToViewportPoint(player.Character[AimPart].Position)
+			if onScreen then
+				local distance = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(screenPoint.X, screenPoint.Y)).Magnitude
+				if distance < shortestDistance then
+					shortestDistance = distance
+					closestPlayer = player
+				end
+			end
+		end
+	end
+	return closestPlayer
 end
 
 -- Aimbot Logic
 RunService.RenderStepped:Connect(function()
-    if AimbotEnabled then
-        local target = GetClosestPlayer()
-        if target and target.Character and target.Character:FindFirstChild("Head") then
-            Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Character.Head.Position)
-        end
-    end
-end)
+	if FOVEnabled then
+		FOVCircle.Position = Vector2.new(Mouse.X, Mouse.Y)
+	end
 
--- Buttons
-local AimbotButton = Instance.new("TextButton", MainFrame)
-AimbotButton.Size = UDim2.new(0, 260, 0, 40)
-AimbotButton.Position = UDim2.new(0, 20, 0, 60)
-AimbotButton.Text = "Toggle Aimbot: OFF"
-AimbotButton.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-AimbotButton.TextColor3 = Color3.new(1, 1, 1)
-AimbotButton.Font = Enum.Font.Gotham
-AimbotButton.TextSize = 18
-AimbotButton.MouseButton1Click:Connect(function()
-    AimbotEnabled = not AimbotEnabled
-    AimbotButton.Text = "Toggle Aimbot: " .. (AimbotEnabled and "ON" or "OFF")
-end)
-
-local FOVButton = Instance.new("TextButton", MainFrame)
-FOVButton.Size = UDim2.new(0, 260, 0, 40)
-FOVButton.Position = UDim2.new(0, 20, 0, 110)
-FOVButton.Text = "FOV Circle: OFF"
-FOVButton.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-FOVButton.TextColor3 = Color3.new(1, 1, 1)
-FOVButton.Font = Enum.Font.Gotham
-FOVButton.TextSize = 18
-FOVButton.MouseButton1Click:Connect(function()
-    FOVEnabled = not FOVEnabled
-    FOVButton.Text = "FOV Circle: " .. (FOVEnabled and "ON" or "OFF")
-end)
-
--- Toggle GUI
-OpenButton.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
+	if AimbotEnabled then
+		local target = GetClosest()
+		if target and target.Character and target.Character:FindFirstChild(AimPart) then
+			Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Character[AimPart].Position)
+		end
+	end
 end)
