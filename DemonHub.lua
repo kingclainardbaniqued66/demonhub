@@ -1,142 +1,141 @@
--- DemonHub by Glockz | Fixed GUI, All Features Enabled
+-- DemonHub by GLoCKz
 local Players, RS, UIS = game:GetService("Players"), game:GetService("RunService"), game:GetService("UserInputService")
 local LP, Mouse, Cam = Players.LocalPlayer, Players.LocalPlayer:GetMouse(), workspace.CurrentCamera
-local Target = nil
-local Speed = 30 -- Default walk speed
 
--- Settings (ALL TRUE by default)
 local Settings = {
     Aimbot = true,
     SilentAim = true,
-    ESP = true,
-    TeamCheck = true,
-    WallCheck = true,
-    DeathCheck = true,
-    FOVEnabled = true,
-    BlatantMode = true,
-    SpeedEnabled = true,
-    FOVRadius = 30
+    FOV = 30,
+    NoClip = true,
+    Lock = true,
 }
 
--- FOV Drawing (locked to screen center, not draggable)
-local FOVCircle = Drawing.new("Circle")
-FOVCircle.Visible = Settings.FOVEnabled
-FOVCircle.Transparency = 1
-FOVCircle.Thickness = 2
-FOVCircle.Color = Color3.new(1, 0, 0)
-FOVCircle.Radius = Settings.FOVRadius
-FOVCircle.Position = Vector2.new(Cam.ViewportSize.X/2, Cam.ViewportSize.Y/2)
-
--- Find Closest Target Function
-function GetClosest()
-    local closest, dist = nil, math.huge
-    for _, plr in pairs(Players:GetPlayers()) do
-        if plr ~= LP and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-            if Settings.TeamCheck and plr.Team == LP.Team then continue end
-            if Settings.DeathCheck and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health <= 0 then continue end
-            local pos, onScreen = Cam:WorldToViewportPoint(plr.Character.HumanoidRootPart.Position)
-            if not onScreen then continue end
-            local mag = (Vector2.new(pos.X, pos.Y) - FOVCircle.Position).Magnitude
-            if mag < dist and mag < Settings.FOVRadius then
-                dist = mag
-                closest = plr
-            end
-        end
-    end
-    return closest
-end
-
--- ESP Setup
-if Settings.ESP then
-    for _, plr in pairs(Players:GetPlayers()) do
-        if plr ~= LP then
-            local tag = Instance.new("BillboardGui", plr.Character:WaitForChild("Head"))
-            tag.Size = UDim2.new(0, 100, 0, 20)
-            tag.AlwaysOnTop = true
-            local txt = Instance.new("TextLabel", tag)
-            txt.Size = UDim2.new(1, 0, 1, 0)
-            txt.Text = plr.Name
-            txt.TextColor3 = Color3.new(1, 0, 0)
-            txt.BackgroundTransparency = 1
-        end
-    end
-end
-
--- Aimbot Loop
-RS.RenderStepped:Connect(function()
-    if Settings.Aimbot then
-        Target = GetClosest()
-        if Target and Target.Character and Target.Character:FindFirstChild("Head") then
-            Cam.CFrame = CFrame.new(Cam.CFrame.Position, Target.Character.Head.Position)
-        end
-    end
-    if Settings.FOVEnabled then
-        FOVCircle.Position = Vector2.new(Cam.ViewportSize.X/2, Cam.ViewportSize.Y/2)
-    end
-end)
-
--- E Key Lock Target
-UIS.InputBegan:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.E then
-        Target = GetClosest()
-    end
-end)
-
--- Speed Walk
-if Settings.SpeedEnabled then
-    LP.Character:WaitForChild("Humanoid").WalkSpeed = Speed
-end
-
--- GUI
+-- Create GUI
 local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
-local Frame = Instance.new("ScrollingFrame", ScreenGui)
-Frame.Size = UDim2.new(0, 250, 0, 300)
-Frame.Position = UDim2.new(0.05, 0, 0.2, 0)
-Frame.CanvasSize = UDim2.new(0, 0, 2, 0)
-Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-Frame.BorderSizePixel = 0
-Frame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-Frame.ScrollBarThickness = 6
+ScreenGui.Name = "DH_"..math.random(1000, 9999)
+local Toggle = Instance.new("TextButton", ScreenGui)
+Toggle.Size = UDim2.new(0, 100, 0, 30)
+Toggle.Position = UDim2.new(0, 10, 0, 100)
+Toggle.Text = "[Toggle]"
+Toggle.BackgroundColor3 = Color3.fromRGB(25,25,25)
+Toggle.TextColor3 = Color3.fromRGB(255,255,255)
 
-function createToggle(name, settingName)
-    local btn = Instance.new("TextButton", Frame)
-    btn.Size = UDim2.new(1, -10, 0, 30)
-    btn.Position = UDim2.new(0, 5, 0, #Frame:GetChildren()*35)
-    btn.Text = name .. ": ON"
-    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    btn.TextColor3 = Color3.new(1, 1, 1)
+local Lock = Instance.new("TextButton", ScreenGui)
+Lock.Size = UDim2.new(0, 100, 0, 30)
+Lock.Position = UDim2.new(0, 10, 0, 140)
+Lock.Text = "[Lock]"
+Lock.BackgroundColor3 = Color3.fromRGB(25,25,25)
+Lock.TextColor3 = Color3.fromRGB(255,255,255)
+
+local Menu = Instance.new("Frame", ScreenGui)
+Menu.Size = UDim2.new(0, 200, 0, 240)
+Menu.Position = UDim2.new(0, 120, 0, 100)
+Menu.BackgroundColor3 = Color3.fromRGB(15,15,15)
+Menu.Visible = false
+
+local FOVSlider = Instance.new("TextButton", Menu)
+FOVSlider.Size = UDim2.new(0, 180, 0, 30)
+FOVSlider.Position = UDim2.new(0, 10, 0, 10)
+FOVSlider.Text = "FOV: "..Settings.FOV
+FOVSlider.BackgroundColor3 = Color3.fromRGB(40,40,40)
+FOVSlider.TextColor3 = Color3.fromRGB(255,255,255)
+
+local function makeToggleButton(name, default, posY)
+    local btn = Instance.new("TextButton", Menu)
+    btn.Size = UDim2.new(0, 180, 0, 30)
+    btn.Position = UDim2.new(0, 10, 0, posY)
+    btn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+    btn.TextColor3 = Color3.fromRGB(255,255,255)
+    btn.Name = name
+    btn.Text = name..": "..tostring(default)
     btn.MouseButton1Click:Connect(function()
-        Settings[settingName] = not Settings[settingName]
-        btn.Text = name .. ": " .. (Settings[settingName] and "ON" or "OFF")
+        Settings[name] = not Settings[name]
+        btn.Text = name..": "..tostring(Settings[name])
     end)
 end
 
--- Add Toggles
-createToggle("Aimbot", "Aimbot")
-createToggle("Silent Aim", "SilentAim")
-createToggle("ESP", "ESP")
-createToggle("Team Check", "TeamCheck")
-createToggle("Wall Check", "WallCheck")
-createToggle("Death Check", "DeathCheck")
-createToggle("FOV Circle", "FOVEnabled")
-createToggle("Blatant Mode", "BlatantMode")
-createToggle("Speed Walk", "SpeedEnabled")
+makeToggleButton("Aimbot", Settings.Aimbot, 50)
+makeToggleButton("SilentAim", Settings.SilentAim, 90)
+makeToggleButton("NoClip", Settings.NoClip, 130)
 
--- Speed Input
-local speedBox = Instance.new("TextBox", Frame)
-speedBox.Size = UDim2.new(1, -10, 0, 30)
-speedBox.Position = UDim2.new(0, 5, 0, (#Frame:GetChildren()) * 35)
-speedBox.PlaceholderText = "Enter Speed (default 30)"
-speedBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-speedBox.TextColor3 = Color3.new(1, 1, 1)
-speedBox.FocusLost:Connect(function()
-    local val = tonumber(speedBox.Text)
-    if val then
-        Speed = val
-        if LP.Character and LP.Character:FindFirstChild("Humanoid") then
-            LP.Character.Humanoid.WalkSpeed = Speed
+FOVSlider.MouseButton1Click:Connect(function()
+    Settings.FOV = (Settings.FOV + 10) % 100
+    if Settings.FOV < 10 then Settings.FOV = 10 end
+    FOVSlider.Text = "FOV: "..Settings.FOV
+end)
+
+Toggle.MouseButton1Click:Connect(function()
+    Menu.Visible = not Menu.Visible
+end)
+
+-- FOV Circle
+local circle = Drawing.new("Circle")
+circle.Thickness = 1.5
+circle.NumSides = 64
+circle.Radius = Settings.FOV
+circle.Color = Color3.fromRGB(255, 0, 0)
+circle.Filled = false
+circle.Visible = true
+
+RS.RenderStepped:Connect(function()
+    local mousePos = UIS:GetMouseLocation()
+    circle.Position = Vector2.new(mousePos.X, mousePos.Y)
+    circle.Radius = Settings.FOV
+end)
+
+-- Silent Aim / Aimbot Logic
+local function getClosestTarget()
+    local maxDist = Settings.FOV
+    local target = nil
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LP and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local pos, onScreen = Cam:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
+            local dist = (Vector2.new(pos.X, pos.Y) - UIS:GetMouseLocation()).Magnitude
+            if dist < maxDist and onScreen then
+                maxDist = dist
+                target = player
+            end
+        end
+    end
+    return target
+end
+
+RS.RenderStepped:Connect(function()
+    if Settings.Aimbot then
+        local target = getClosestTarget()
+        if target and target.Character then
+            local part = target.Character:FindFirstChild("Head")
+            if part then
+                Cam.CFrame = CFrame.new(Cam.CFrame.Position, part.Position)
+            end
         end
     end
 end)
 
-print("✅ DemonHub Loaded | Made by GLockz")
+-- Silent Aim Hook
+if Settings.SilentAim then
+    local __namecall
+    __namecall = hookmetamethod(game, "__namecall", function(...)
+        local args = {...}
+        local method = getnamecallmethod()
+        if tostring(method) == "FireServer" and args[2] and typeof(args[2]) == "Vector3" then
+            local target = getClosestTarget()
+            if target and target.Character and target.Character:FindFirstChild("Head") then
+                args[2] = target.Character.Head.Position
+                return __namecall(unpack(args))
+            end
+        end
+        return __namecall(...)
+    end)
+end
+
+-- NoClip
+RS.Stepped:Connect(function()
+    if Settings.NoClip and LP.Character then
+        for _, part in ipairs(LP.Character:GetDescendants()) do
+            if part:IsA("BasePart") and part.CanCollide then
+                part.CanCollide = false
+            end
+        end
+    end
+end)
