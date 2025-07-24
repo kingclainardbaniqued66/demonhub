@@ -1,122 +1,131 @@
--- DemonHub by GLockz | Mobile-Supported Aimbot GUI
-
+-- DemonHub by GLockz
 local Players = game:GetService("Players")
-local RS = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 local LP = Players.LocalPlayer
 local Mouse = LP:GetMouse()
-local Cam = workspace.CurrentCamera
+local Camera = workspace.CurrentCamera
 
 -- Settings
-local Aimbot = true
+local AimbotEnabled = true
 local FOVEnabled = true
-local AimPart = "Head"
 local FOVRadius = 100
-local TeamCheck = false
+local TargetPart = "Head"
 
--- UI Setup
-local Gui = Instance.new("ScreenGui", LP:WaitForChild("PlayerGui"))
-Gui.Name = "DemonHub"
+-- Create GUI
+local ScreenGui = Instance.new("ScreenGui", LP:WaitForChild("PlayerGui"))
+ScreenGui.Name = "DemonHubUI"
 
 -- Open Button
-local Open = Instance.new("TextButton")
-Open.Size = UDim2.new(0, 180, 0, 40)
-Open.Position = UDim2.new(0, 10, 0, 10)
-Open.BackgroundColor3 = Color3.fromRGB(30,30,30)
-Open.Text = "🔥 Open DemonHub Menu"
-Open.TextColor3 = Color3.new(1,1,1)
-Open.Font = Enum.Font.GothamBold
-Open.TextSize = 18
-Open.Parent = Gui
+local OpenButton = Instance.new("TextButton")
+OpenButton.Size = UDim2.new(0, 200, 0, 50)
+OpenButton.Position = UDim2.new(0, 10, 0, 10)
+OpenButton.Text = "🔥 Open DemonHub Menu"
+OpenButton.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+OpenButton.TextColor3 = Color3.new(1,1,1)
+OpenButton.Font = Enum.Font.GothamBold
+OpenButton.TextSize = 18
+OpenButton.Parent = ScreenGui
 
--- Main Frame
-local Main = Instance.new("Frame")
-Main.Size = UDim2.new(0, 300, 0, 250)
-Main.Position = UDim2.new(0, 10, 0, 60)
-Main.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-Main.Visible = false
-Main.Active = true
-Main.Draggable = true
-Main.Parent = Gui
+-- Main Menu
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 300, 0, 250)
+MainFrame.Position = UDim2.new(0, 10, 0, 70)
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+MainFrame.Visible = false
+MainFrame.Parent = ScreenGui
 
 -- Title
 local Title = Instance.new("TextLabel")
 Title.Text = "DemonHub.lua"
 Title.Size = UDim2.new(1, 0, 0, 40)
-Title.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-Title.TextColor3 = Color3.new(1, 1, 1)
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 20
-Title.Parent = Main
+Title.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+Title.TextColor3 = Color3.new(1,1,1)
+Title.Font = Enum.Font.GothamBlack
+Title.TextSize = 24
+Title.Parent = MainFrame
 
--- Toggle Buttons
-local function MakeToggle(name, default, callback, position)
-	local Btn = Instance.new("TextButton")
-	Btn.Size = UDim2.new(0, 260, 0, 35)
-	Btn.Position = UDim2.new(0, 20, 0, position)
-	Btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-	Btn.TextColor3 = Color3.new(1,1,1)
-	Btn.Font = Enum.Font.Gotham
-	Btn.TextSize = 16
-	Btn.Text = name .. ": " .. (default and "ON" or "OFF")
-	Btn.Parent = Main
+-- Aimbot Toggle
+local AimbotToggle = Instance.new("TextButton")
+AimbotToggle.Size = UDim2.new(1, -20, 0, 40)
+AimbotToggle.Position = UDim2.new(0, 10, 0, 60)
+AimbotToggle.Text = "Aimbot: ON"
+AimbotToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+AimbotToggle.TextColor3 = Color3.new(1,1,1)
+AimbotToggle.Font = Enum.Font.Gotham
+AimbotToggle.TextSize = 18
+AimbotToggle.Parent = MainFrame
 
-	local state = default
-	Btn.MouseButton1Click:Connect(function()
-		state = not state
-		Btn.Text = name .. ": " .. (state and "ON" or "OFF")
-		callback(state)
-	end)
-
-	return Btn
-end
-
--- Toggles
-MakeToggle("Aimbot", true, function(val) Aimbot = val end, 50)
-MakeToggle("FOV Circle", true, function(val) FOVEnabled = val end, 90)
-
--- Open Button Logic
-Open.MouseButton1Click:Connect(function()
-	Main.Visible = not Main.Visible
-end)
+-- FOV Toggle
+local FOVToggle = Instance.new("TextButton")
+FOVToggle.Size = UDim2.new(1, -20, 0, 40)
+FOVToggle.Position = UDim2.new(0, 10, 0, 110)
+FOVToggle.Text = "FOV Circle: ON"
+FOVToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+FOVToggle.TextColor3 = Color3.new(1,1,1)
+FOVToggle.Font = Enum.Font.Gotham
+FOVToggle.TextSize = 18
+FOVToggle.Parent = MainFrame
 
 -- FOV Circle
-local FOV = Drawing.new("Circle")
-FOV.Color = Color3.fromRGB(255, 0, 0)
-FOV.Radius = FOVRadius
-FOV.Thickness = 2
-FOV.Transparency = 0.5
-FOV.Filled = false
-FOV.Visible = FOVEnabled
+local Circle = Drawing.new("Circle")
+Circle.Color = Color3.fromRGB(255, 0, 0)
+Circle.Thickness = 2
+Circle.NumSides = 64
+Circle.Radius = FOVRadius
+Circle.Filled = false
+Circle.Visible = FOVEnabled
 
--- Target Finder
-local function GetClosest()
-	local Max, Target = FOVRadius, nil
-	for _, v in pairs(Players:GetPlayers()) do
-		if v ~= LP and v.Character and v.Character:FindFirstChild(AimPart) then
-			if TeamCheck and v.Team == LP.Team then continue end
-			local Pos, OnScreen = Cam:WorldToViewportPoint(v.Character[AimPart].Position)
-			if OnScreen then
-				local Dist = (Vector2.new(Pos.X, Pos.Y) - UIS:GetMouseLocation()).Magnitude
-				if Dist < Max then
-					Max = Dist
-					Target = v
-				end
-			end
-		end
-	end
-	return Target
+-- Functions
+local function getClosestPlayer()
+    local closest, distance = nil, FOVRadius
+    for _, v in pairs(Players:GetPlayers()) do
+        if v ~= LP and v.Character and v.Character:FindFirstChild(TargetPart) then
+            local pos, onscreen = Camera:WorldToViewportPoint(v.Character[TargetPart].Position)
+            if onscreen then
+                local mag = (Vector2.new(pos.X, pos.Y) - Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)).Magnitude
+                if mag < distance then
+                    closest = v
+                    distance = mag
+                end
+            end
+        end
+    end
+    return closest
 end
 
 -- Aimbot Loop
-RS.RenderStepped:Connect(function()
-	FOV.Visible = FOVEnabled
-	FOV.Position = UIS:GetMouseLocation()
+RunService.RenderStepped:Connect(function()
+    -- Center the FOV circle
+    Circle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+    Circle.Visible = FOVEnabled
 
-	if Aimbot then
-		local Target = GetClosest()
-		if Target and Target.Character and Target.Character:FindFirstChild(AimPart) then
-			Cam.CFrame = CFrame.new(Cam.CFrame.Position, Target.Character[AimPart].Position)
-		end
-	end
+    if AimbotEnabled then
+        local target = getClosestPlayer()
+        if target and target.Character and target.Character:FindFirstChild(TargetPart) then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Character[TargetPart].Position)
+        end
+    end
+end)
+
+-- Toggles
+OpenButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+
+AimbotToggle.MouseButton1Click:Connect(function()
+    AimbotEnabled = not AimbotEnabled
+    AimbotToggle.Text = "Aimbot: " .. (AimbotEnabled and "ON" or "OFF")
+end)
+
+FOVToggle.MouseButton1Click:Connect(function()
+    FOVEnabled = not FOVEnabled
+    FOVToggle.Text = "FOV Circle: " .. (FOVEnabled and "ON" or "OFF")
+end)
+
+-- Mobile support: tap to open menu
+UIS.TouchTap:Connect(function()
+    if not MainFrame.Visible then
+        MainFrame.Visible = true
+    end
 end)
