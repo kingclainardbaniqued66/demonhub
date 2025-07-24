@@ -1,131 +1,180 @@
--- DemonHub by @kingclainardbaniqued66
--- Mobile Friendly, Modern UI
+-- DemonHub by GLockz / kingclainardbaniqued66
 
-local Players, RunService, UserInputService = game:GetService("Players"), game:GetService("RunService"), game:GetService("UserInputService")
-local Camera, LocalPlayer = workspace.CurrentCamera, Players.LocalPlayer
-local Mouse = LocalPlayer:GetMouse()
-local Target, Locked = nil, false
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+local LP = Players.LocalPlayer
+local Mouse = LP:GetMouse()
+local Camera = workspace.CurrentCamera
 
-local Settings = {
-    SilentAim = false,
-    Aimbot = false,
-    Noclip = false,
-    FOV = 80
-}
+local Gui = Instance.new("ScreenGui", LP:WaitForChild("PlayerGui"))
+Gui.Name = "DemonHub"
+Gui.ResetOnSpawn = false
 
--- Create GUI
-local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
-ScreenGui.Name = "DemonHub"
+-- UI FRAME
+local Main = Instance.new("Frame", Gui)
+Main.Size = UDim2.new(0, 300, 0, 360)
+Main.Position = UDim2.new(0.5, -150, 0.5, -180)
+Main.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+Main.BorderSizePixel = 0
+Main.Visible = false
+Main.AnchorPoint = Vector2.new(0.5, 0.5)
+Main.Active = true
+Main.Draggable = true
 
-local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0, 250, 0, 300)
-MainFrame.Position = UDim2.new(0.5, -125, 0.5, -150)
-MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.Draggable = true
+-- UI Title
+local Title = Instance.new("TextLabel", Main)
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Text = "DemonHub"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 18
 
-local UICorner = Instance.new("UICorner", MainFrame)
-UICorner.CornerRadius = UDim.new(0, 10)
+-- Toggle Button
+local ToggleBtn = Instance.new("TextButton", Gui)
+ToggleBtn.Size = UDim2.new(0, 60, 0, 30)
+ToggleBtn.Position = UDim2.new(0, 10, 0, 10)
+ToggleBtn.Text = "[Toggle]"
+ToggleBtn.Font = Enum.Font.GothamBold
+ToggleBtn.TextSize = 14
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 
-local UIListLayout = Instance.new("UIListLayout", MainFrame)
-UIListLayout.Padding = UDim.new(0, 8)
-UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-UIListLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+ToggleBtn.MouseButton1Click:Connect(function()
+	Main.Visible = not Main.Visible
+end)
 
--- Toggle & Lock
-local function createButton(text, callback)
-    local button = Instance.new("TextButton")
-    button.Size = UDim2.new(0, 200, 0, 30)
-    button.Text = text
-    button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    button.TextColor3 = Color3.fromRGB(255, 255, 255)
-    button.Font = Enum.Font.GothamBold
-    button.TextSize = 14
-    button.Parent = MainFrame
-    Instance.new("UICorner", button).CornerRadius = UDim.new(0, 6)
-    button.MouseButton1Click:Connect(callback)
-    return button
+-- Lock Button
+local LockBtn = Instance.new("TextButton", Gui)
+LockBtn.Size = UDim2.new(0, 60, 0, 30)
+LockBtn.Position = UDim2.new(0, 80, 0, 10)
+LockBtn.Text = "[Lock]"
+LockBtn.Font = Enum.Font.GothamBold
+LockBtn.TextSize = 14
+LockBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+LockBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+-- Feature Toggles
+local function CreateToggle(name, y, default)
+	local toggle = Instance.new("TextButton", Main)
+	toggle.Size = UDim2.new(0, 260, 0, 30)
+	toggle.Position = UDim2.new(0, 20, 0, y)
+	toggle.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+	toggle.Font = Enum.Font.Gotham
+	toggle.TextSize = 14
+	toggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+	toggle.Text = name .. ": Off"
+
+	local state = false
+
+	toggle.MouseButton1Click:Connect(function()
+		state = not state
+		toggle.Text = name .. ": " .. (state and "On" or "Off")
+	end)
+
+	return function()
+		return state
+	end
 end
 
-local ToggleBtn = createButton("[Toggle Menu]", function()
-    MainFrame.Visible = not MainFrame.Visible
-end)
-
-local LockBtn = createButton("[Lock Target: Off]", function()
-    Locked = not Locked
-    LockBtn.Text = "[Lock Target: " .. (Locked and "On" or "Off") .. "]"
-end)
+local getSilentAim = CreateToggle("Silent Aim", 40, false)
+local getAimbot = CreateToggle("Aimbot", 80, false)
+local getNoclip = CreateToggle("Noclip", 120, false)
 
 -- FOV Slider
-local FOVSlider = Instance.new("TextLabel")
-FOVSlider.Size = UDim2.new(0, 200, 0, 30)
-FOVSlider.Text = "FOV: " .. Settings.FOV
-FOVSlider.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-FOVSlider.TextColor3 = Color3.fromRGB(255, 255, 255)
-FOVSlider.Font = Enum.Font.Gotham
-FOVSlider.TextSize = 14
-FOVSlider.Parent = MainFrame
-Instance.new("UICorner", FOVSlider).CornerRadius = UDim.new(0, 6)
+local FOVLabel = Instance.new("TextLabel", Main)
+FOVLabel.Size = UDim2.new(0, 260, 0, 20)
+FOVLabel.Position = UDim2.new(0, 20, 0, 160)
+FOVLabel.Text = "FOV Radius: 100"
+FOVLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+FOVLabel.Font = Enum.Font.Gotham
+FOVLabel.TextSize = 14
+FOVLabel.BackgroundTransparency = 1
 
--- Feature toggles
-local function addToggle(name)
-    local btn = createButton(name .. ": Off", function()
-        Settings[name] = not Settings[name]
-        btn.Text = name .. ": " .. (Settings[name] and "On" or "Off")
-    end)
-end
+local FOVSlider = Instance.new("TextButton", Main)
+FOVSlider.Size = UDim2.new(0, 260, 0, 20)
+FOVSlider.Position = UDim2.new(0, 20, 0, 190)
+FOVSlider.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+FOVSlider.Text = ""
+FOVSlider.AutoButtonColor = false
 
-addToggle("SilentAim")
-addToggle("Aimbot")
-addToggle("Noclip")
+local circle = Drawing.new("Circle")
+circle.Color = Color3.fromRGB(255, 0, 0)
+circle.Thickness = 1
+circle.NumSides = 100
+circle.Filled = false
+circle.Radius = 100
+circle.Visible = false
 
--- FOV Circle
-local Circle = Drawing.new("Circle")
-Circle.Visible = true
-Circle.Thickness = 2
-Circle.Radius = Settings.FOV
-Circle.Color = Color3.fromRGB(255, 0, 0)
-Circle.Transparency = 0.5
-Circle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+local showFOV = false
+
+FOVSlider.MouseButton1Click:Connect(function()
+	showFOV = not showFOV
+	circle.Visible = showFOV
+end)
 
 RunService.RenderStepped:Connect(function()
-    Circle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-
-    -- Noclip
-    if Settings.Noclip and LocalPlayer.Character then
-        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
-            end
-        end
-    end
-
-    -- Aimbot Lock
-    if Locked and Target and Target:FindFirstChild("Head") then
-        local headPos = Target.Head.Position
-        Camera.CFrame = CFrame.new(Camera.CFrame.Position, headPos)
-    end
+	circle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 end)
 
--- Silent Aim (basic)
+-- Aimbot + SilentAim Target
 local function getClosestPlayer()
-    local closest, dist = nil, math.huge
-    for _, v in pairs(Players:GetPlayers()) do
-        if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("Head") then
-            local pos, onScreen = Camera:WorldToViewportPoint(v.Character.Head.Position)
-            local mag = (Vector2.new(pos.X, pos.Y) - Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)).Magnitude
-            if mag < Settings.FOV and mag < dist then
-                closest = v
-                dist = mag
-            end
-        end
-    end
-    return closest
+	local closest, distance = nil, math.huge
+	for _, v in pairs(Players:GetPlayers()) do
+		if v ~= LP and v.Character and v.Character:FindFirstChild("Head") then
+			local screenPoint, onScreen = Camera:WorldToViewportPoint(v.Character.Head.Position)
+			if onScreen then
+				local mag = (Vector2.new(screenPoint.X, screenPoint.Y) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
+				if mag < circle.Radius then
+					if mag < distance then
+						closest = v
+						distance = mag
+					end
+				end
+			end
+		end
+	end
+	return closest
 end
 
-Mouse.Button2Down:Connect(function()
-    if Locked then
-        Target = getClosestPlayer()
-    end
+-- Aimbot behavior
+RunService.RenderStepped:Connect(function()
+	if getAimbot() then
+		local target = getClosestPlayer()
+		if target and target.Character and target.Character:FindFirstChild("Head") then
+			Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Character.Head.Position)
+		end
+	end
 end)
+
+-- Noclip
+RunService.Stepped:Connect(function()
+	if getNoclip() and LP.Character then
+		for _, part in pairs(LP.Character:GetDescendants()) do
+			if part:IsA("BasePart") then
+				part.CanCollide = false
+			end
+		end
+	end
+end)
+
+-- Silent Aim (anti-detect logic handled elsewhere if needed)
+
+-- Lock Button Target
+local lockedTarget = nil
+LockBtn.MouseButton1Click:Connect(function()
+	if lockedTarget then
+		lockedTarget = nil
+		LockBtn.Text = "[Lock]"
+	else
+		lockedTarget = getClosestPlayer()
+		LockBtn.Text = "[Locked]"
+	end
+end)
+
+-- Load with everything OFF
+Main.Visible = false
+circle.Visible = false
+
+print("✅ DemonHub Loaded")
