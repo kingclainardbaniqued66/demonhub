@@ -1,175 +1,142 @@
--- DemonHub by GLockz
--- All features ON by default, GUI toggles, FOV, Silent Aim, ESP, Speed Walk.
+-- DemonHub by Glockz | Fixed GUI, All Features Enabled
+local Players, RS, UIS = game:GetService("Players"), game:GetService("RunService"), game:GetService("UserInputService")
+local LP, Mouse, Cam = Players.LocalPlayer, Players.LocalPlayer:GetMouse(), workspace.CurrentCamera
+local Target = nil
+local Speed = 30 -- Default walk speed
 
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UIS = game:GetService("UserInputService")
-local Camera = workspace.CurrentCamera
-local LocalPlayer = Players.LocalPlayer
-
--- Settings
+-- Settings (ALL TRUE by default)
 local Settings = {
     Aimbot = true,
     SilentAim = true,
     ESP = true,
-    FOV = true,
     TeamCheck = true,
     WallCheck = true,
     DeathCheck = true,
-    SpeedWalk = true,
-    WalkSpeed = 20,
-    FOVRadius = 30,
-    LockKey = Enum.KeyCode.E
+    FOVEnabled = true,
+    BlatantMode = true,
+    SpeedEnabled = true,
+    FOVRadius = 30
 }
 
-local Target, Locking = nil, false
+-- FOV Drawing (locked to screen center, not draggable)
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Visible = Settings.FOVEnabled
+FOVCircle.Transparency = 1
+FOVCircle.Thickness = 2
+FOVCircle.Color = Color3.new(1, 0, 0)
+FOVCircle.Radius = Settings.FOVRadius
+FOVCircle.Position = Vector2.new(Cam.ViewportSize.X/2, Cam.ViewportSize.Y/2)
 
--- GUI Setup
-local gui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-gui.Name = "DemonHubUI"
-
-local openBtn = Instance.new("TextButton", gui)
-openBtn.Size = UDim2.new(0, 200, 0, 40)
-openBtn.Position = UDim2.new(0,10,0,10)
-openBtn.Text = "🔥 Open DemonHub Menu"
-openBtn.BackgroundColor3 = Color3.fromRGB(30,30,30)
-openBtn.TextColor3 = Color3.new(1,1,1)
-openBtn.Font = Enum.Font.GothamBold
-openBtn.TextSize = 18
-
-local main = Instance.new("Frame", gui)
-main.Size = UDim2.new(0, 300, 0, 400)
-main.Position = UDim2.new(0,10,0,60)
-main.BackgroundColor3 = Color3.fromRGB(20,20,20)
-main.Visible = false
-main.Active = true
-main.Draggable = true
-
-local scroll = Instance.new("ScrollingFrame", main)
-scroll.Size = UDim2.new(1,0,1,0)
-scroll.CanvasSize = UDim2.new(0,0,2,0)
-scroll.ScrollBarThickness = 4
-
-local layout = Instance.new("UIListLayout", scroll)
-layout.Padding = UDim.new(0,5)
-
--- Helper to create toggles
-local function MakeToggle(name)
-    local btn = Instance.new("TextButton", scroll)
-    btn.Size = UDim2.new(1, -20, 0, 35)
-    btn.BackgroundColor3 = Color3.fromRGB(35,35,35)
-    btn.Font = Enum.Font.Gotham
-    btn.TextSize = 16
-    btn.TextColor3 = Color3.new(1,1,1)
-    btn.Text = name .. ": ON"
-    btn.MouseButton1Click:Connect(function()
-        local key = name:gsub(" ", "")
-        Settings[key] = not Settings[key]
-        btn.Text = name .. ": " .. (Settings[key] and "ON" or "OFF")
-    end)
-end
-
-for _, name in ipairs({"Aimbot","SilentAim","ESP","FOV","TeamCheck","WallCheck","DeathCheck","SpeedWalk"}) do
-    MakeToggle(name)
-end
-
--- Speed input
-local speedLbl = Instance.new("TextLabel", scroll)
-speedLbl.Size = UDim2.new(1, -20, 0, 30)
-speedLbl.BackgroundTransparency = 1
-speedLbl.Text = "Walk Speed:"
-speedLbl.Font = Enum.Font.Gotham
-speedLbl.TextSize = 16
-speedLbl.TextColor3 = Color3.new(1,1,1)
-
-local speedBox = Instance.new("TextBox", scroll)
-speedBox.Size = UDim2.new(1, -20, 0, 30)
-speedBox.Text = tostring(Settings.WalkSpeed)
-speedBox.BackgroundColor3 = Color3.fromRGB(35,35,35)
-speedBox.Font = Enum.Font.Gotham
-speedBox.TextSize = 16
-speedBox.TextColor3 = Color3.new(1,1,1)
-
-speedBox.FocusLost:Connect(function()
-    local v = tonumber(speedBox.Text)
-    if v and v > 0 then
-        Settings.WalkSpeed = v
-    end
-end)
-
-openBtn.MouseButton1Click:Connect(function()
-    main.Visible = not main.Visible
-    openBtn.Text = main.Visible and "❌ Close DemonHub Menu" or "🔥 Open DemonHub Menu"
-end)
-
--- FOV Circle
-local circle = Drawing.new("Circle")
-circle.Thickness = 1
-circle.Filled = false
-circle.Transparency = 1
-circle.Color = Color3.new(1,1,1)
-
-RunService.RenderStepped:Connect(function()
-    circle.Visible = Settings.FOV
-    circle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-    circle.Radius = Settings.FOVRadius
-
-    if Settings.SpeedWalk and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-        LocalPlayer.Character.Humanoid.WalkSpeed = Settings.WalkSpeed
-    end
-end)
-
--- ESP creation
-local function CreateEspBox(plr)
-    if not plr.Character or plr.Character:FindFirstChild("ESPBox") then return end
-    local box = Instance.new("BoxHandleAdornment")
-    box.Name = "ESPBox"
-    box.Adornee = plr.Character:FindFirstChild("HumanoidRootPart")
-    box.AlwaysOnTop = true
-    box.ZIndex = 5
-    box.Color3 = Color3.new(1,0,0)
-    box.Size = Vector3.new(3,5,1)
-    box.Parent = plr.Character
-end
-
--- Get nearest target
-local function GetClosest()
-    local shortest = Settings.FOVRadius
-    local nearest = nil
-    for _, v in ipairs(Players:GetPlayers()) do
-        if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
-            if Settings.TeamCheck and v.Team == LocalPlayer.Team then continue end
-            if Settings.DeathCheck and v.Character:FindFirstChild("Humanoid") and v.Character.Humanoid.Health <= 0 then continue end
-            local pos, onScreen = Camera:WorldToViewportPoint(v.Character.HumanoidRootPart.Position)
-            if onScreen then
-                local dist = (Vector2.new(pos.X,pos.Y) - (Camera.ViewportSize/2)).Magnitude
-                if dist < shortest then
-                    nearest = v
-                    shortest = dist
-                end
+-- Find Closest Target Function
+function GetClosest()
+    local closest, dist = nil, math.huge
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= LP and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+            if Settings.TeamCheck and plr.Team == LP.Team then continue end
+            if Settings.DeathCheck and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health <= 0 then continue end
+            local pos, onScreen = Cam:WorldToViewportPoint(plr.Character.HumanoidRootPart.Position)
+            if not onScreen then continue end
+            local mag = (Vector2.new(pos.X, pos.Y) - FOVCircle.Position).Magnitude
+            if mag < dist and mag < Settings.FOVRadius then
+                dist = mag
+                closest = plr
             end
         end
     end
-    return nearest
+    return closest
 end
 
--- Lock on E
-UIS.InputBegan:Connect(function(inp, gpe)
-    if inp.KeyCode == Settings.LockKey and not gpe then
-        Locking = not Locking
-        if Locking then Target = GetClosest() end
-    end
-end)
-
--- Main Loop: Aimbot + ESP + Silent Aim
-RunService.RenderStepped:Connect(function()
-    if Settings.ESP then
-        for _,p in ipairs(Players:GetPlayers()) do
-            if p~=LocalPlayer then CreateEspBox(p) end
+-- ESP Setup
+if Settings.ESP then
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= LP then
+            local tag = Instance.new("BillboardGui", plr.Character:WaitForChild("Head"))
+            tag.Size = UDim2.new(0, 100, 0, 20)
+            tag.AlwaysOnTop = true
+            local txt = Instance.new("TextLabel", tag)
+            txt.Size = UDim2.new(1, 0, 1, 0)
+            txt.Text = plr.Name
+            txt.TextColor3 = Color3.new(1, 0, 0)
+            txt.BackgroundTransparency = 1
         end
     end
+end
 
-    if Target and Settings.Aimbot then
-        Camera.CFrame = CFrame.new(Camera.CFrame.Position, Target.Character.Head.Position)
+-- Aimbot Loop
+RS.RenderStepped:Connect(function()
+    if Settings.Aimbot then
+        Target = GetClosest()
+        if Target and Target.Character and Target.Character:FindFirstChild("Head") then
+            Cam.CFrame = CFrame.new(Cam.CFrame.Position, Target.Character.Head.Position)
+        end
+    end
+    if Settings.FOVEnabled then
+        FOVCircle.Position = Vector2.new(Cam.ViewportSize.X/2, Cam.ViewportSize.Y/2)
     end
 end)
+
+-- E Key Lock Target
+UIS.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.E then
+        Target = GetClosest()
+    end
+end)
+
+-- Speed Walk
+if Settings.SpeedEnabled then
+    LP.Character:WaitForChild("Humanoid").WalkSpeed = Speed
+end
+
+-- GUI
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+local Frame = Instance.new("ScrollingFrame", ScreenGui)
+Frame.Size = UDim2.new(0, 250, 0, 300)
+Frame.Position = UDim2.new(0.05, 0, 0.2, 0)
+Frame.CanvasSize = UDim2.new(0, 0, 2, 0)
+Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+Frame.BorderSizePixel = 0
+Frame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+Frame.ScrollBarThickness = 6
+
+function createToggle(name, settingName)
+    local btn = Instance.new("TextButton", Frame)
+    btn.Size = UDim2.new(1, -10, 0, 30)
+    btn.Position = UDim2.new(0, 5, 0, #Frame:GetChildren()*35)
+    btn.Text = name .. ": ON"
+    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.MouseButton1Click:Connect(function()
+        Settings[settingName] = not Settings[settingName]
+        btn.Text = name .. ": " .. (Settings[settingName] and "ON" or "OFF")
+    end)
+end
+
+-- Add Toggles
+createToggle("Aimbot", "Aimbot")
+createToggle("Silent Aim", "SilentAim")
+createToggle("ESP", "ESP")
+createToggle("Team Check", "TeamCheck")
+createToggle("Wall Check", "WallCheck")
+createToggle("Death Check", "DeathCheck")
+createToggle("FOV Circle", "FOVEnabled")
+createToggle("Blatant Mode", "BlatantMode")
+createToggle("Speed Walk", "SpeedEnabled")
+
+-- Speed Input
+local speedBox = Instance.new("TextBox", Frame)
+speedBox.Size = UDim2.new(1, -10, 0, 30)
+speedBox.Position = UDim2.new(0, 5, 0, (#Frame:GetChildren()) * 35)
+speedBox.PlaceholderText = "Enter Speed (default 30)"
+speedBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+speedBox.TextColor3 = Color3.new(1, 1, 1)
+speedBox.FocusLost:Connect(function()
+    local val = tonumber(speedBox.Text)
+    if val then
+        Speed = val
+        if LP.Character and LP.Character:FindFirstChild("Humanoid") then
+            LP.Character.Humanoid.WalkSpeed = Speed
+        end
+    end
+end)
+
+print("✅ DemonHub Loaded | Made by GLockz")
